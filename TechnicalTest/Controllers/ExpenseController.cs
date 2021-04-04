@@ -35,8 +35,18 @@ namespace TechnicalTest.Controllers
             text = regex.Replace(text, "");
 
             string xml = $"<Root> {text} </Root>";
+
             XmlDocument doc = new XmlDocument();
-            doc.LoadXml(xml);
+            try
+            {
+                doc.LoadXml(xml);
+            }
+
+            catch(Exception e)
+            {
+                throw new HttpException(400, e.Message);
+            }
+            
             var xmlFragments = from XmlNode node in doc.FirstChild.ChildNodes
                                where node.NodeType == XmlNodeType.Element
                                select node;
