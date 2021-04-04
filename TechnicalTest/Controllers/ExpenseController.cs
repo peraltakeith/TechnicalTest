@@ -7,11 +7,14 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web.Http;
 using System.Xml;
+using TechnicalTest.Helpers;
+using TechnicalTest.Models;
 
 namespace TechnicalTest.Controllers
 {
     public class ExpenseController : ApiController
     {
+        private Expense _expense;
         // GET api/values
         public IEnumerable<string> Get()
         {
@@ -65,7 +68,9 @@ Ivan
                 sb.Append(fragment.OuterXml);
             }
 
-            Console.WriteLine(sb.ToString());
+            //Console.WriteLine(sb.ToString());
+            var newXML = $"<Root> {sb} </Root>";
+            _expense = DeserializationHelper.DeserializeXML<Expense>(newXML);
         }
 
         // PUT api/values/5
