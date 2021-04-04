@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 using System.Web.Http;
 using System.Xml;
 using TechnicalTest.Helpers;
@@ -28,34 +29,12 @@ namespace TechnicalTest.Controllers
         }
 
         // POST api/values
-        public void Post([FromBody] string text)
+        public Expense Post([FromBody] string text)
         {
-            string sample = @"
-Hi Yvaine,
-Please create an expense claim for the below. Relevant details are marked up as requested...
-<expense>
-	<cost_centre>DEV002</cost_centre>
-	<total>1024.01</total>
-	<payment_method>personal card</payment_method>
-</expense>
-
-From: Ivan Castle Sent: Friday, 16 February 2018 10:32 AM
-To: Antoine Lloyd <Antoine.Lloyd@example.com>
-Subject: test
-Hi Antoine,
-Please create a reservation at the <vendor>Viaduct Steakhouse</vendor> our
-<description>development team's project end celebration dinner</description> on <date>Tuesday
-27 April 2017</date>. We expect to arrive around 7.15pm. Approximately 12 people but I'll
-confirm exact numbers closer to the day.
-Regards,
-Ivan
-";
-
-            //this should take care of the email problem in the sample text
             var regex = new Regex("<.*@.*>", RegexOptions.IgnoreCase | RegexOptions.Multiline);
-            sample = regex.Replace(sample, "");
+            text = regex.Replace(text, "");
 
-            string xml = $"<Root> {sample} </Root>";
+            string xml = $"<Root> {text} </Root>";
             XmlDocument doc = new XmlDocument();
             doc.LoadXml(xml);
             var xmlFragments = from XmlNode node in doc.FirstChild.ChildNodes
@@ -68,9 +47,21 @@ Ivan
                 sb.Append(fragment.OuterXml);
             }
 
-            //Console.WriteLine(sb.ToString());
+            //need to re-add the root element to the string to avoid problems deserializing the xml
             var newXML = $"<Root> {sb} </Root>";
             _expense = DeserializationHelper.DeserializeXML<Expense>(newXML);
+
+            if(_expense.Total == null)
+            {
+                throw new HttpException(400, "Bad Request");
+            }
+
+            _expense.GST = decimal.Round(Convert.ToDecimal(GSTHelper.GSTCalculator(_expense.Total)), 
+                2, MidpointRounding.AwayFromZero);
+            _expense.TotalExcludingGST = decimal.Round(Convert.ToDecimal(_expense.Total - _expense.GST),
+                2, MidpointRounding.AwayFromZero);
+
+            return _expense;
         }
 
         // PUT api/values/5
